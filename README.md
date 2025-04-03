@@ -7,3 +7,8 @@ TABLE OF CONTENT:
 04) Defining puncta uncertainy value
 05) EMCCD imaging conditions
 06)Defining End-to-End Distance, PHI and THETA Angles
+
+01) Fiduciary markers and image Registration steps
+Fiducial markers which are diffraction limited with high photostability (TetraSpec Beads TM) were choes for the procress of image registration. Further product information can be found below:
+https://www.thermofisher.com/order/catalog/product/T7279
+
