@@ -6,7 +6,9 @@ TABLE OF CONTENT:
 03) Quantification of image intensity
 04) Defining puncta uncertainy value
 05) EMCCD imaging conditions
-06)Defining End-to-End Distance, PHI and THETA Angles
+06) Defining the PHI and THETA Angle
+
+
 
 CONTENT
 
@@ -63,6 +65,9 @@ For more information please visit
 Mortensen, Kim I., et al. "Optimized localization analysis for single-molecule tracking and super-resolution microscopy." Nature methods 7.5 (2010): 377-381.
 
 
+05) EMCCD imaging conditions
 
 
+
+06) Defining the PHI and THETA Angle
 
