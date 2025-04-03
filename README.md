@@ -49,3 +49,20 @@ https://picassosr.readthedocs.io/en/latest/
 
 
 03) Quantification of image intensity
+
+
+Image intensity quantification is done via ThunderStorm Analysis which is a plugin available through Fiji/ImageJ. For more information please refer to
+
+M. Ovesný, P. Křížek, J. Borkovec, Z. Švindrych, G. M. Hagen. ThunderSTORM: a comprehensive ImageJ plugin for PALM and STORM data analysis and super-resolution imaging. Bioinformatics 30(16):2389-2390, 2014.
+
+
+04) Defining puncta uncertainy value
+
+For more information please visit
+
+Mortensen, Kim I., et al. "Optimized localization analysis for single-molecule tracking and super-resolution microscopy." Nature methods 7.5 (2010): 377-381.
+
+
+
+
+
