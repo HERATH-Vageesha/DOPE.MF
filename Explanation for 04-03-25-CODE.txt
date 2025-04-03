@@ -1,0 +1,15 @@
+The code is an updated version from 02-08-25
+The code has multiple filtrations for
+01) Uncertainty Filtration
+02) Photon Filtration
+03) ROI region Filtration
+
+Also, it generates a scatter plot which visually shows the that
+01) PHI
+02) TETHA
+03) DISTANCE
+
+On the scatter plots. Now, this code CANNOT be used for timelapses since timelapses require a frame filtration for a frame by frame
+analysis. This is the next step, where I do a frame filtration for timelapses
+
+THETA DEF: here the theta angle is defined from the surface to the probe which is UNCONVENTIONAL, but the conventional method confuses everyone so for the time being this is a temporary adjustment
