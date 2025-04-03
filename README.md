@@ -9,6 +9,7 @@ TABLE OF CONTENT:
 06)Defining End-to-End Distance, PHI and THETA Angles
 
 Fiduciary markers and image Registration steps
-Fiducial markers which are diffraction limited with high photostability (TetraSpec Beads TM) were choes for the procress of image registration. Further product information can be found below:
+Fiducial markers which are diffraction limited with high photostability (TetraSpec Beads TM) were choes for the procress of image registration. 
+Further product information can be found below:
 https://www.thermofisher.com/order/catalog/product/T7279
 
