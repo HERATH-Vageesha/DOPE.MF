@@ -72,3 +72,4 @@ Given then end to end distance of the probe, puncta with an uncertainty value le
 
 06) Defining the PHI and THETA Angle
 
+The PHI angle was the orientation/dipole direction from the cy3b channel (TIRF 560) to ATTI647 channe; (TIRF 647) channel on a 2D plane when visualizing the angles from above. 
