@@ -63,9 +63,10 @@ M. Ovesný, P. Křížek, J. Borkovec, Z. Švindrych, G. M. Hagen. ThunderSTORM:
 For more information please visit
 
 Mortensen, Kim I., et al. "Optimized localization analysis for single-molecule tracking and super-resolution microscopy." Nature methods 7.5 (2010): 377-381.
-
+Given then end to end distance of the probe, puncta with an uncertainty value lesser than 5nm were chosen and filtered when moving onto identifying probe angles. Given the uncertainty of either dipole being able to have a combine 10nm uncertainy would be the maximum uncertainy.
 
 05) EMCCD imaging conditions
+
 
 
 
