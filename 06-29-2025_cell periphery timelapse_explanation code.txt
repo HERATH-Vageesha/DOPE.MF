@@ -1,0 +1,147 @@
+================================================================================
+EXPLANATION OF PYTHON SCRIPT: 04-23-24-NO CELL - SINGLE FRAME ANALYSIS (UPDATED)
+================================================================================
+
+DESCRIPTION:
+------------
+This Python script processes ThunderSTORM localization data from a dual-channel TIRF microscopy experiment involving Cy3b (560 nm channel) and ATTO647N (647 nm channel). It performs data filtering, dipole detection, angle calculation, dipole tracking across frames (with a 3-frame gap allowance), and saves both tabular results and visualizations for quantitative analysis of molecular dipoles.
+
+================================================================================
+1. IMPORTS
+----------
+Essential libraries are imported:
+- pandas, numpy: data manipulation
+- matplotlib, seaborn: plotting
+- scipy.spatial: spatial matching (KD-tree, distance matrices)
+- scipy.stats: Pearson correlation analysis
+- scipy.optimize: linear sum assignment (Hungarian algorithm)
+
+================================================================================
+2. THRESHOLD SETTING
+--------------------
+Thresholds are defined for:
+- Uncertainty (nm): to ensure precise localization
+- Intensity (photons): to remove dim localizations
+- Spatial bounds (X, Y): to restrict analysis to a region of interest
+- Pairing radius: 232 nm for identifying dipoles
+- Tracking radius: 400 nm for following dipoles across frames
+
+================================================================================
+3. DATA LOADING
+---------------
+ThunderSTORM-generated CSV files for C1 and C2 channels are read in using pandas.
+Only the necessary columns are loaded:
+- ID, Frame, X [nm], Y [nm], Uncertainty [nm], Intensity [photon]
+
+================================================================================
+4. DATA FILTERING
+-----------------
+The following filters are applied to both channels:
+- Uncertainty must be within the defined range (0–10 nm)
+- Intensity must meet channel-specific photon count thresholds
+- X/Y position must fall within [0, 80000] nm
+
+This step reduces false positives from noisy, dim, or off-target detections.
+
+================================================================================
+5. SCATTER PLOT OF LOCALIZATIONS
+--------------------------------
+A scatter plot is generated to visualize filtered localizations:
+- C1 (green) and C2 (red)
+- Plot saved as 'scatter_c1_c2.png'
+
+================================================================================
+6. DIPOLE DETECTION (C1↔C2 MATCHING)
+------------------------------------
+For each C1 localization:
+- KD-tree is used to find all C2 localizations within a 232 nm radius (same frame only)
+- Euclidean distance is computed for each valid pair
+- Results (coordinates, uncertainties, distances) are stored
+
+These define candidate dipoles.
+
+================================================================================
+7. ANGLE AND MIDPOINT CALCULATION
+---------------------------------
+For each dipole:
+- Φ (phi): in-plane angle in degrees (0° to 360°)
+- θ (theta): estimated tilt angle based on normalized distance (0° to 90°)
+- Midpoints (X, Y): average position between C1 and C2
+
+These features are important for downstream biophysical interpretation.
+
+================================================================================
+8. DIPOLE TRACKING ACROSS FRAMES (WITH 3-FRAME GAP)
+---------------------------------------------------
+Tracks dipoles across time based on midpoint movement.
+
+Key changes:
+- Dipoles are matched to previous frames within a 3-frame window
+- Matching is done using midpoint positions
+- Hungarian algorithm optimally assigns dipoles to prior track IDs based on minimal distance
+- If distance < 400 nm, the dipole is considered the same
+- If no match is found, a new Track ID is created
+
+All dipoles are assigned a "Track ID" column.
+
+================================================================================
+9. EXPORT TO EXCEL
+------------------
+The full dipole dataset is saved to:
+- Master sheet: all dipole pairs
+- One sheet per Track ID: time series of that dipole's behavior
+
+Output file: 'Tracked_Dipoles.xlsx'
+
+================================================================================
+10. HISTOGRAM AND ANGLE ANALYSIS
+--------------------------------
+- Histogram of dipole end-to-end distances
+- Scatter plot of distance vs. Φ angle
+- Pearson correlation is calculated and printed to assess potential angular dependence
+
+================================================================================
+11. VISUALIZATION OF MIDPOINT ANGLES
+------------------------------------
+Dipole midpoints are color-coded by:
+- θ (theta): pseudo-3D tilt, colormap = 'viridis'
+- Φ (phi): in-plane angle, colormap = 'plasma'
+
+Arrows are added to maps to show dipole direction (from C1 to C2):
+- Arrows use Φ angle for orientation
+- Two versions: Φ-colored map with arrows, and θ-colored map with arrows
+
+Plots saved:
+- midpoint_theta_colormap.png
+- midpoint_phi_colormap.png
+- midpoint_phi_colormap_arrows.png
+- midpoint_theta_colormap_arrows.png
+
+================================================================================
+KEY BEHAVIORAL DETAILS:
+-----------------------
+✔ Dipoles only saved if:
+  - C1–C2 are within 232 nm
+  - Both pass all filtering (uncertainty, intensity, ROI)
+  - Are in the same frame
+
+✔ θ = 0° dipoles ARE included (no exclusion)
+
+✔ Tracks are maintained across up to 3 consecutive frame gaps (e.g., frame 01 ↔ frame 04 allowed if within 400 nm)
+
+✔ Hungarian algorithm ensures globally optimal dipole matching frame-by-frame
+
+================================================================================
+OUTPUTS GENERATED:
+------------------
+- scatter_c1_c2.png
+- Tracked_Dipoles.xlsx
+- Distance_Histogram_Filtered.png
+- midpoint_theta_colormap.png
+- midpoint_phi_colormap.png
+- midpoint_phi_colormap_arrows.png
+- midpoint_theta_colormap_arrows.png
+
+================================================================================
+END OF EXPLANATION
+================================================================================
