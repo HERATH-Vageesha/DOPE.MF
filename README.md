@@ -70,18 +70,13 @@ Given then end to end distance of the probe, puncta with an uncertainty value le
 
 Pixel size: 150 nm
 
-
 Photoelectorns per A/D count: 15.1
-
 
 Quantum Efficiency; 1.0
 
-
-Base levele [A/D counts: 166
-
+Base levele [A/D counts]: 166
 
 EM Gain: 800
-
 
 Peadout Noise [e-/pixel}: N/A
 
