@@ -66,10 +66,14 @@ Mortensen, Kim I., et al. "Optimized localization analysis for single-molecule t
 Given then end to end distance of the probe, puncta with an uncertainty value lesser than 5nm were chosen and filtered when moving onto identifying probe angles. Given the uncertainty of either dipole being able to have a combine 10nm uncertainy would be the maximum uncertainy.
 
 05) EMCCD imaging conditions
+Pixel size: 150 nm
+Photoelectorns per A/D count: 15.1
+Quantum Efficiency; 1.0
+Base levele [A/D counts: 166
+EM Gain: 800
+Peadout Noise [e-/pixel}: N/A
 
 
-
-
-06) Defining the PHI and THETA Angle
+7) Defining the PHI and THETA Angle
 
 The PHI angle was the orientation/dipole direction from the cy3b channel (TIRF 560) to ATTI647 channe; (TIRF 647) channel on a 2D plane when visualizing the angles from above. 
