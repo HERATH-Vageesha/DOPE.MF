@@ -66,6 +66,8 @@ Mortensen, Kim I., et al. "Optimized localization analysis for single-molecule t
 Given then end to end distance of the probe, puncta with an uncertainty value lesser than 5nm were chosen and filtered when moving onto identifying probe angles. Given the uncertainty of either dipole being able to have a combine 10nm uncertainy would be the maximum uncertainy.
 
 05) EMCCD imaging conditions
+
+
 Pixel size: 150 nm
 Photoelectorns per A/D count: 15.1
 Quantum Efficiency; 1.0
