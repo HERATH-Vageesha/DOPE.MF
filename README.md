@@ -34,7 +34,7 @@ b) Registration Plugin
 
 c) Image registration verification
 
-      Perform puncta localization via ThunderStorm  --> Feed TIRF560/647N(Duanl channel localization) to 02-08-25_SMLM_IMAGE ANALYSIS GENERAL_optimized.py --> Take output from code and feed said output as into to 6-12-25_Vector_Distance_Dipole Visualization_QuiverPlot_optimized.py
+      Perform puncta localization via ThunderStorm  --> Feed TIRF560/647N(Dual channel localization) to 02-08-25_SMLM_IMAGE ANALYSIS GENERAL_optimized.py --> Take output from code and feed said output as into to 6-12-25_Vector_Distance_Dipole Visualization_QuiverPlot_optimized.py
 
 02) Drift Correction for timelapses
 
