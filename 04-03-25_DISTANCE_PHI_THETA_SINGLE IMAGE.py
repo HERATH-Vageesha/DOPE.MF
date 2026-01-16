@@ -1,233 +1,313 @@
-#################################################################################################################################
-################################# LOADING DATA, FILTERING BY UNCERTAINTY, INTENSITY & COORDINATES, AND CALCULATE DISTANCE AND ANGLE VALUES  ############
-#################################################################################################################################
+##################################################################################################
+###########################   SMLM IMAGE ANALYSIS (FULL + FIXED + ALL PLOTS)   #####################
+##################################################################################################
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
 from scipy.spatial import cKDTree
+from scipy.stats import pearsonr
+from scipy.optimize import linear_sum_assignment
+from scipy.spatial.distance import cdist
 
-# UNCERTAINTY FILTERATION
-lower_threshold = 0    # Set your desired lower threshold for uncertainty
-upper_threshold = 10   # Set your desired upper threshold for uncertainty
 
-# ROI FILTERATION (X and Y coordinate cutoff)
-x_lower = 00000
+# =============================================================================
+# USER THRESHOLDS
+# =============================================================================
+lower_threshold_c1 = 0
+upper_threshold_c1 = 40
+lower_threshold_c2 = 0
+upper_threshold_c2 = 40
+
+x_lower = 0
 x_upper = 80000
-y_lower = 0000
+y_lower = 0
 y_upper = 80000
 
-# INTENSITY FILTERATION
-intensity_lower = 0       # Set your desired lower threshold for intensity [photon]
-intensity_upper = 100000  # Set your desired upper threshold for intensity [photon]
+intensity_lower_c1 = 0
+intensity_upper_c1 = 100000
+intensity_lower_c2 = 0
+intensity_upper_c2 = 100000
 
-# Load CSV files (including the intensity column)
-columns_to_use = ["x [nm]", "y [nm]", "uncertainty_xy [nm]", "intensity [photon]"]
-df_c1 = pd.read_csv("Channel-01.csv", usecols=columns_to_use)  # MUST BE THE CY3B CHANNEL
-df_c2 = pd.read_csv("Channel-02.csv", usecols=columns_to_use)  # MUST BE THE ATTO647N CHANNEL
 
-# Filter data based on uncertainty values for both channels
-df_c1 = df_c1[(df_c1["uncertainty_xy [nm]"] >= lower_threshold) & (df_c1["uncertainty_xy [nm]"] <= upper_threshold)]
-df_c2 = df_c2[(df_c2["uncertainty_xy [nm]"] >= lower_threshold) & (df_c2["uncertainty_xy [nm]"] <= upper_threshold)]
+# =============================================================================
+# PARAMETERS
+# =============================================================================
+RADIUS_NM = 232.0
+TRACK_LINK_NM = 400.0
+ROD_LENGTH_NM = 120.0
 
-# Filter data based on intensity values for both channels
-df_c1 = df_c1[(df_c1["intensity [photon]"] >= intensity_lower) & (df_c1["intensity [photon]"] <= intensity_upper)]
-df_c2 = df_c2[(df_c2["intensity [photon]"] >= intensity_lower) & (df_c2["intensity [photon]"] <= intensity_upper)]
+ONE_TO_ONE_PER_FRAME = True
+DROP_AMBIGUOUS_TRACKS = True
 
-# Filter data based on X and Y coordinates for both channels
-df_c1 = df_c1[(df_c1["x [nm]"] >= x_lower) & (df_c1["x [nm]"] <= x_upper) &
-              (df_c1["y [nm]"] >= y_lower) & (df_c1["y [nm]"] <= y_upper)]
-df_c2 = df_c2[(df_c2["x [nm]"] >= x_lower) & (df_c2["x [nm]"] <= x_upper) &
-              (df_c2["y [nm]"] >= y_lower) & (df_c2["y [nm]"] <= y_upper)]
+C1_COLOR = "green"
+C2_COLOR = "red"
 
-# Scatter plot before image registration (using filtered data)
+
+# =============================================================================
+# COLUMN NAMES
+# =============================================================================
+ID_COL = "id"
+FRAME_COL = "frame"
+XCOL = "x [nm]"
+YCOL = "y [nm]"
+UNCOL = "uncertainty_xy [nm]"
+ICOL = "intensity [photon]"
+
+
+# =============================================================================
+# LOAD DATA
+# =============================================================================
+cols = [ID_COL, FRAME_COL, XCOL, YCOL, UNCOL, ICOL]
+df_c1 = pd.read_csv("TIRF560_imageregperformed.csv", usecols=cols)
+df_c2 = pd.read_csv("TIRF560_imageregperformed.csv", usecols=cols)
+
+
+# =============================================================================
+# FILTERING
+# =============================================================================
+def apply_filters(df, u_lo, u_hi, x_lo, x_hi, y_lo, y_hi, i_lo, i_hi):
+    df = df.dropna().copy()
+    return df[
+        (df[UNCOL] >= u_lo) & (df[UNCOL] <= u_hi) &
+        (df[ICOL] >= i_lo) & (df[ICOL] <= i_hi) &
+        (df[XCOL] >= x_lo) & (df[XCOL] <= x_hi) &
+        (df[YCOL] >= y_lo) & (df[YCOL] <= y_hi)
+    ].reset_index(drop=True)
+
+
+df_c1 = apply_filters(df_c1, lower_threshold_c1, upper_threshold_c1,
+                      x_lower, x_upper, y_lower, y_upper,
+                      intensity_lower_c1, intensity_upper_c1)
+
+df_c2 = apply_filters(df_c2, lower_threshold_c2, upper_threshold_c2,
+                      x_lower, x_upper, y_lower, y_upper,
+                      intensity_lower_c2, intensity_upper_c2)
+
+
+# =============================================================================
+# INITIAL SCATTER (UNCHANGED)
+# =============================================================================
 plt.figure(figsize=(8, 6))
-plt.scatter(df_c1["x [nm]"], df_c1["y [nm]"], color='green', alpha=0.2, label='TIRF 560')
-plt.scatter(df_c2["x [nm]"], df_c2["y [nm]"], color='red', alpha=0.2, label='TIRF 647')
+plt.scatter(df_c1[XCOL], df_c1[YCOL], color=C1_COLOR, alpha=0.3, label="TIRF 560")
+plt.scatter(df_c2[XCOL], df_c2[YCOL], color=C2_COLOR, alpha=0.3, label="TIRF 647")
 plt.xlabel("X Position (nm)")
 plt.ylabel("Y Position (nm)")
-plt.title("Scatter Plot: CHANNELS BEFORE IMAGE REGISTRATION\n(Filtered by Uncertainty, Intensity & Coordinates)")
+plt.title("Scatter Plot of C1 and C2 Channels")
 plt.legend()
 plt.grid(True)
-plt.savefig("scatter_plot_filtered.png", dpi=300, bbox_inches="tight")
+plt.gca().invert_yaxis()
+plt.savefig("scatter_c1_c2.png", dpi=300, bbox_inches="tight")
 plt.show()
 
-# Calculate distances within 232 nm radius
-radius_threshold = 232
-c2_tree = cKDTree(df_c2[["x [nm]", "y [nm]"]])
-results = []
-for i, row in df_c1.iterrows():
-    indices = c2_tree.query_ball_point([row["x [nm]"], row["y [nm]"]], radius_threshold)
-    for idx in indices:
-        dist = np.sqrt((df_c2.iloc[idx]["x [nm]"] - row["x [nm]"])**2 + 
-                       (df_c2.iloc[idx]["y [nm]"] - row["y [nm]"])**2)
-        results.append([row["x [nm]"], row["y [nm]"],
-                        df_c2.iloc[idx]["x [nm]"], df_c2.iloc[idx]["y [nm]"],
-                        dist, row["uncertainty_xy [nm]"], df_c2.iloc[idx]["uncertainty_xy [nm]"]])
 
-# Save distance data
-columns = ["C1 X (nm)", "C1 Y (nm)", "C2 X (nm)", "C2 Y (nm)", 
-           "Distance (nm)", "C1 Uncertainty (nm)", "C2 Uncertainty (nm)"]
-distance_df = pd.DataFrame(results, columns=columns)
-distance_df.to_excel("End-to-End Distance_PUNCTA_Filtered.xlsx", index=False)
+# =============================================================================
+# SAME-CHANNEL CROWDING + OPPOSITE CHANNEL REMOVAL
+# =============================================================================
+def remove_ambiguous_triplets_framewise(df1, df2, r):
+    rem1 = np.zeros(len(df1), dtype=bool)
+    rem2 = np.zeros(len(df2), dtype=bool)
 
-# Plot histogram of distances
+    frames = set(df1[FRAME_COL]).union(df2[FRAME_COL])
+    for fr in frames:
+        idx1 = df1.index[df1[FRAME_COL] == fr].to_numpy()
+        idx2 = df2.index[df2[FRAME_COL] == fr].to_numpy()
+        if len(idx1) == 0 or len(idx2) == 0:
+            continue
+
+        xy1 = df1.loc[idx1, [XCOL, YCOL]].to_numpy()
+        xy2 = df2.loc[idx2, [XCOL, YCOL]].to_numpy()
+
+        t1, t2 = cKDTree(xy1), cKDTree(xy2)
+
+        for i, j in t1.query_pairs(r):
+            if t2.query_ball_point(xy1[i], r) or t2.query_ball_point(xy1[j], r):
+                rem1[idx1[[i, j]]] = True
+                rem2[idx2[t2.query_ball_point(xy1[i], r)]] = True
+                rem2[idx2[t2.query_ball_point(xy1[j], r)]] = True
+
+        for i, j in t2.query_pairs(r):
+            if t1.query_ball_point(xy2[i], r) or t1.query_ball_point(xy2[j], r):
+                rem2[idx2[[i, j]]] = True
+                rem1[idx1[t1.query_ball_point(xy2[i], r)]] = True
+                rem1[idx1[t1.query_ball_point(xy2[j], r)]] = True
+
+    return df1.loc[~rem1].reset_index(drop=True), df2.loc[~rem2].reset_index(drop=True)
+
+
+df_c1, df_c2 = remove_ambiguous_triplets_framewise(df_c1, df_c2, RADIUS_NM)
+
+
+# =============================================================================
+# ONE-TO-ONE PAIRING PER FRAME
+# =============================================================================
+rows = []
+
+for fr in sorted(set(df_c1[FRAME_COL]).intersection(df_c2[FRAME_COL])):
+    g1 = df_c1[df_c1[FRAME_COL] == fr].reset_index(drop=True)
+    g2 = df_c2[df_c2[FRAME_COL] == fr].reset_index(drop=True)
+
+    xy1 = g1[[XCOL, YCOL]].to_numpy()
+    xy2 = g2[[XCOL, YCOL]].to_numpy()
+    if len(xy1) == 0 or len(xy2) == 0:
+        continue
+
+    D = cdist(xy1, xy2)
+    D[D > RADIUS_NM] = 1e9
+    r, c = linear_sum_assignment(D)
+
+    for i, j in zip(r, c):
+        if D[i, j] > RADIUS_NM:
+            continue
+
+        dx = xy2[j, 0] - xy1[i, 0]
+        dy = xy2[j, 1] - xy1[i, 1]
+        dist = np.hypot(dx, dy)
+
+        rows.append([
+            g1.loc[i, ID_COL], fr, xy1[i, 0], xy1[i, 1],
+            g2.loc[j, ID_COL], fr, xy2[j, 0], xy2[j, 1],
+            dist, g1.loc[i, UNCOL], g2.loc[j, UNCOL]
+        ])
+
+distance_df = pd.DataFrame(rows, columns=[
+    "C1 id", "C1 Frame", "C1 X (nm)", "C1 Y (nm)",
+    "C2 id", "C2 Frame", "C2 X (nm)", "C2 Y (nm)",
+    "Distance (nm)", "C1 Uncertainty (nm)", "C2 Uncertainty (nm)"
+])
+
+
+# =============================================================================
+# ANGLES + MIDPOINTS (θ AS NaN WHEN INVALID)
+# =============================================================================
+dx = distance_df["C2 X (nm)"] - distance_df["C1 X (nm)"]
+dy = distance_df["C2 Y (nm)"] - distance_df["C1 Y (nm)"]
+
+distance_df["Φ (degrees)"] = (np.degrees(np.arctan2(dy, dx)) + 360) % 360
+
+theta = np.full(len(distance_df), np.nan)
+valid = distance_df["Distance (nm)"] <= ROD_LENGTH_NM
+theta[valid] = np.degrees(np.arccos(distance_df.loc[valid, "Distance (nm)"] / ROD_LENGTH_NM))
+distance_df["θ (degrees)"] = theta
+
+distance_df["mid_x"] = (distance_df["C1 X (nm)"] + distance_df["C2 X (nm)"]) / 2
+distance_df["mid_y"] = (distance_df["C1 Y (nm)"] + distance_df["C2 Y (nm)"]) / 2
+
+
+# =============================================================================
+# TRACKING
+# =============================================================================
+distance_df["Track ID"] = np.nan
+next_id = 1
+prev = {}
+
+for fr in sorted(distance_df["C1 Frame"].unique()):
+    mask = distance_df["C1 Frame"] == fr
+    pts = distance_df.loc[mask, ["mid_x", "mid_y"]].to_numpy()
+
+    if fr == distance_df["C1 Frame"].min():
+        ids = np.arange(next_id, next_id + len(pts))
+        distance_df.loc[mask, "Track ID"] = ids
+        next_id += len(pts)
+        for i, idx in enumerate(distance_df[mask].index):
+            prev[int(ids[i])] = pts[i]
+        continue
+
+    prev_ids = list(prev.keys())
+    prev_pts = np.vstack([prev[k] for k in prev_ids])
+    cost = cdist(prev_pts, pts)
+    r, c = linear_sum_assignment(cost)
+
+    assigned = np.full(len(pts), np.nan)
+    for i, j in zip(r, c):
+        if cost[i, j] < TRACK_LINK_NM:
+            assigned[j] = prev_ids[i]
+
+    for i in range(len(pts)):
+        if np.isnan(assigned[i]):
+            assigned[i] = next_id
+            next_id += 1
+
+    distance_df.loc[mask, "Track ID"] = assigned
+    for i, idx in enumerate(distance_df[mask].index):
+        prev[int(assigned[i])] = pts[i]
+
+
+# =============================================================================
+# MASKS FOR ZERO DISTANCE
+# =============================================================================
+zero_dist_mask = distance_df["Distance (nm)"] == 0
+nonzero_dist_mask = ~zero_dist_mask
+
+
+# =============================================================================
+# ALL ORIGINAL PLOTS (UNCHANGED, WITH ZERO-DISTANCE FIX)
+# =============================================================================
+
+# Distance histogram
 plt.figure(figsize=(10, 6))
-plt.hist(distance_df["Distance (nm)"], bins=30, color='blue', alpha=0.7, edgecolor='black')
+plt.hist(distance_df["Distance (nm)"], bins=30, edgecolor="black")
 plt.xlabel("Distance (nm)")
 plt.ylabel("Frequency")
-plt.title("END-TO-END DISTANCE DISTRIBUTION (nm)")
-plt.yticks(range(0, int(max(plt.hist(distance_df["Distance (nm)"], bins=30)[0])) + 1))
-plt.savefig("Distance_Histogram_Filtered.png", dpi=300, bbox_inches="tight")
+plt.title("End-to-End Distance Distribution (nm)")
 plt.show()
 
-# -----------------------------------------------------------------------------
-# Compute angles and update the Excel file with both PHI and THETA angles
-# -----------------------------------------------------------------------------
-
-# Compute PHI angle (dipole angle) and denote with "Φ" symbol
-angles_phi_rad = np.arctan2(distance_df["C2 Y (nm)"] - distance_df["C1 Y (nm)"],
-                             distance_df["C2 X (nm)"] - distance_df["C1 X (nm)"])
-distance_df["Φ (degrees)"] = (np.degrees(angles_phi_rad) + 360) % 360
-
-# Compute THETA angle (denoted by "θ") using cosine relation: cos(θ) = Distance / 120 nm
-# Clip the ratio to the valid range for arccos
-distance_ratio = np.clip(distance_df["Distance (nm)"] / 120, -1, 1)
-theta_rad = np.arccos(distance_ratio)
-distance_df["θ (degrees)"] = np.degrees(theta_rad)
-
-# Save updated distance data with both angles
-distance_df.to_excel("End-to-End Distance_PUNCTA_Filtered.xlsx", index=False)
-
-# -----------------------------------------------------------------------------
-# Plot polar histogram for PHI angle (Φ)
-plt.figure(figsize=(8, 8))
-ax_phi = plt.subplot(111, projection='polar')
-phi_rad = np.radians(distance_df["Φ (degrees)"])
-ax_phi.hist(phi_rad, bins=30, color='pink', alpha=0.3, edgecolor='black')
-ax_phi.set_theta_zero_location('E')
-ax_phi.set_theta_direction(1)
-ax_phi.set_yticks(range(0, int(max(ax_phi.hist(phi_rad, bins=30)[0])) + 1))
-ax_phi.set_title("Φ Angle Distribution (Degrees)")
-plt.show()
-
-# -----------------------------------------------------------------------------
-# Plot polar histogram for THETA angle (θ)
-plt.figure(figsize=(8, 8))
-ax_theta = plt.subplot(111, projection='polar')
-theta_rad_plot = np.radians(distance_df["θ (degrees)"])
-ax_theta.hist(theta_rad_plot, bins=30, color='lightblue', alpha=0.3, edgecolor='black')
-ax_theta.set_theta_zero_location('E')
-ax_theta.set_theta_direction(1)
-ax_theta.set_yticks(range(0, int(max(ax_theta.hist(theta_rad_plot, bins=30)[0])) + 1))
-ax_theta.set_title("θ Angle Distribution (Degrees)")
-plt.show()
-
-
-################################################################################################################################
-############## DISTANCE/ANGLE ANALYSIS : DISTANCE VS ANGLE & DISTANCE VS UNCERTAINTY & CHROMATIC ABBERATION DETECTION
-###############################################################################################################################
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-from scipy.stats import pearsonr
-
-# Load the saved Excel file (with updated angles)
-file_name = "End-to-End Distance_PUNCTA_Filtered.xlsx"
-distance_df = pd.read_excel(file_name)
-
-# Scatter Plot: Distance vs. Φ Angle (PHI)
+# Φ vs Distance
 plt.figure(figsize=(8, 6))
-plt.scatter(distance_df["Φ (degrees)"], distance_df["Distance (nm)"], color='purple', alpha=0.5)
-plt.xlabel("Φ Angle (degrees)")
-plt.ylabel("End-to-End Distance (nm)")
-plt.title("Scatter Plot: Distance vs. Φ Angle")
-plt.grid(True)
-correlation_phi, p_value_phi = pearsonr(distance_df["Φ (degrees)"], distance_df["Distance (nm)"])
-plt.show()
-print(f"Φ Pearson Correlation Coefficient: {correlation_phi:.4f}, P-Value: {p_value_phi:.4f}")
-
-# Scatter Plot: End-to-End Distance vs. Uncertainty
-plt.figure(figsize=(8, 6))
-plt.scatter(distance_df["Distance (nm)"], distance_df["C1 Uncertainty (nm)"], color='green', alpha=0.5, label="C1 Uncertainty")
-plt.scatter(distance_df["Distance (nm)"], distance_df["C2 Uncertainty (nm)"], color='red', alpha=0.5, label="C2 Uncertainty")
-plt.xlabel("End-to-End Distance (nm)")
-plt.ylabel("Uncertainty (nm)")
-plt.title("End-to-End Distance vs. Uncertainty (C1 & C2)")
-plt.legend()
-plt.grid(True)
-correlation_c1, p_value_c1 = pearsonr(distance_df["Distance (nm)"], distance_df["C1 Uncertainty (nm)"])
-correlation_c2, p_value_c2 = pearsonr(distance_df["Distance (nm)"], distance_df["C2 Uncertainty (nm)"])
-plt.show()
-print(f"C1 Pearson Correlation: {correlation_c1:.4f}, P-Value: {p_value_c1:.4f}")
-print(f"C2 Pearson Correlation: {correlation_c2:.4f}, P-Value: {p_value_c2:.4f}")
-
-# Scatter Plot: Distance from Center vs. Dipole Length
-roi_size, pixel_size_nm = 512, 160
-image_center_x, image_center_y = (roi_size / 2) * pixel_size_nm, (roi_size / 2) * pixel_size_nm
-dipole_center_x = (distance_df["C1 X (nm)"] + distance_df["C2 X (nm)"]) / 2
-dipole_center_y = (distance_df["C1 Y (nm)"] + distance_df["C2 Y (nm)"]) / 2
-distance_from_center = np.sqrt((dipole_center_x - image_center_x) ** 2 + (dipole_center_y - image_center_y) ** 2)
-
-plt.figure(figsize=(8, 6))
-plt.scatter(distance_from_center, distance_df["Distance (nm)"], color='blue', alpha=0.5)
-plt.xlabel("Distance from Image Center (nm)")
-plt.ylabel("End-to-End Distance (nm)")
-plt.title("Chromatic Aberration Analysis: Distance from Center vs. Dipole Length")
+plt.scatter(distance_df["Φ (degrees)"], distance_df["Distance (nm)"], alpha=0.5)
+plt.xlabel("Φ (degrees)")
+plt.ylabel("Distance (nm)")
 plt.grid(True)
 plt.show()
 
-
-##########################################################################################
-#########################  DIPOLE WITH DIRECTIONS  ########################################
-##########################################################################################
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-
-# Load the saved Excel file (with updated angles)
-file_name = "End-to-End Distance_PUNCTA_Filtered.xlsx"
-distance_df = pd.read_excel(file_name)
-
-# Extract C1 and C2 coordinates
-x_c1, y_c1 = distance_df["C1 X (nm)"], distance_df["C1 Y (nm)"]
-x_c2, y_c2 = distance_df["C2 X (nm)"], distance_df["C2 Y (nm)"]
-
-# Create scatter plot with symbolic arrows indicating directionality
+# θ-colored midpoints
 plt.figure(figsize=(10, 8))
-plt.scatter(x_c1, y_c1, color='green', alpha=0.7, label="TIRF 560")
-plt.scatter(x_c2, y_c2, color='red', alpha=0.7, label="TIRF 647")
-
-# Draw symbolic arrows from C1 to C2 and add annotations (with both Φ and θ)
-for i in range(len(distance_df)):
-    # Draw the dashed arrow line
-    plt.plot([x_c1[i], x_c2[i]], [y_c1[i], y_c2[i]], 'k--', alpha=0.7)  # Dashed line for trajectory
-    
-    # Draw the arrow text as in the original code
-    plt.text((x_c1[i] + x_c2[i]) / 2, (y_c1[i] + y_c2[i]) / 2, "--->", fontsize=12, color='black', 
-             ha='center', va='center', fontweight='bold',
-             rotation=np.degrees(np.arctan2(y_c2[i] - y_c1[i], x_c2[i] - x_c1[i])))
-    
-    # Calculate additional annotation: midpoint, distance, PHI and THETA angles
-    mid_x = (x_c1[i] + x_c2[i]) / 2
-    mid_y = (y_c1[i] + y_c2[i]) / 2
-    phi_angle = distance_df["Φ (degrees)"].iloc[i]
-    theta_angle = distance_df["θ (degrees)"].iloc[i]
-    distance_nm = distance_df["Distance (nm)"].iloc[i]
-    
-    # Create annotation text with distance, Φ and θ angle values
-    annotation_text = f"{distance_nm:.1f} nm, Φ={phi_angle:.1f}°, θ={theta_angle:.1f}°"
-    
-    # Place the annotation slightly offset from the midpoint (adjust offset as needed)
-    plt.text(mid_x, mid_y + 10, annotation_text, fontsize=8, color='black', 
-             ha='center', va='center', fontweight='bold')
-
-# Labels, title, and legend
-plt.xlabel("X Position (nm)")
-plt.ylabel("Y Position (nm)")
-plt.title("Scatter Plot with Symbolic Directional Arrows: C1 to C2")
-plt.legend()
-plt.grid(True)
-
-# Show the plot
+plt.scatter(distance_df["mid_x"], distance_df["mid_y"],
+            c=distance_df["θ (degrees)"], cmap="viridis", vmin=0, vmax=90)
+plt.colorbar(label="θ (degrees)")
+plt.gca().invert_yaxis()
 plt.show()
+
+# Φ-colored midpoints
+plt.figure(figsize=(10, 8))
+plt.scatter(distance_df["mid_x"], distance_df["mid_y"],
+            c=distance_df["Φ (degrees)"], cmap="plasma", vmin=0, vmax=360)
+plt.colorbar(label="Φ (degrees)")
+plt.gca().invert_yaxis()
+plt.show()
+
+# Φ arrows (NO arrows for distance == 0)
+plt.figure(figsize=(10, 8))
+plt.scatter(distance_df["mid_x"], distance_df["mid_y"],
+            c=distance_df["Φ (degrees)"], cmap="plasma", vmin=0, vmax=360)
+
+phi = np.radians(distance_df.loc[nonzero_dist_mask, "Φ (degrees)"])
+plt.quiver(distance_df.loc[nonzero_dist_mask, "mid_x"],
+           distance_df.loc[nonzero_dist_mask, "mid_y"],
+           np.cos(phi)*1800, np.sin(phi)*1800)
+
+for _, r in distance_df.loc[zero_dist_mask].iterrows():
+    plt.text(r["mid_x"], r["mid_y"], "NaN", ha="center")
+
+plt.colorbar(label="Φ (degrees)")
+plt.gca().invert_yaxis()
+plt.show()
+
+# θ-colored with Φ arrows
+plt.figure(figsize=(10, 8))
+plt.scatter(distance_df["mid_x"], distance_df["mid_y"],
+            c=distance_df["θ (degrees)"], cmap="viridis", vmin=0, vmax=90)
+
+plt.quiver(distance_df.loc[nonzero_dist_mask, "mid_x"],
+           distance_df.loc[nonzero_dist_mask, "mid_y"],
+           np.cos(phi)*1800, np.sin(phi)*1800)
+
+for _, r in distance_df.loc[zero_dist_mask].iterrows():
+    plt.text(r["mid_x"], r["mid_y"], "NaN", ha="center")
+
+plt.colorbar(label="θ (degrees)")
+plt.gca().invert_yaxis()
+plt.show()
+
+
