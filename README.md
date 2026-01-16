@@ -32,14 +32,9 @@ b) Registration Plugin
       ImageJ/Fiji --> PLugin --> Registration --> Descriptor Based Registration (2d/3d)
 
 
+c) Image registration verification
 
-Once the image has been registered, the image registration matrix is calulted. Using this matrix the experimental timelapses can be automatically registered moving forward.
-
-To check the validity of the registration once the fiducary markers have been registered, perform localization of the puncta (explained further down in the document) and for the two seperate channesl run the localization through the code 
-
-02-08-25_SMLM_IMAGE ANALYSIS GENERAL_optimized.py (01-15-2025). Once the output file has been generated using this code feed that to the 
-
-6-12-25_Vector_Distance_Dipole Visualization_QuiverPlot_optimized.py code to further visualize the aligments/regustration efficiency of the code.
+      Perform puncta localization via ThunderStorm  --> Feed TIRF560/647N(Duanl channel localization) to 02-08-25_SMLM_IMAGE ANALYSIS GENERAL_optimized.py --> Take output from code and feed said output as into to 6-12-25_Vector_Distance_Dipole Visualization_QuiverPlot_optimized.py
 
 02) Drift Correction for timelapses
 
