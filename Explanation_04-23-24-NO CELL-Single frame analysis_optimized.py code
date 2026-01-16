@@ -1,0 +1,62 @@
+This repository contains a complete end-to-end analysis pipeline for two-color SMLM / TIRF microscopy data (e.g., TIRF 560 and TIRF 647). 
+The pipeline is designed to extract dipole distances, orientations, and trajectories while robustly handling crowded regions, ambiguous pairings, and physically undefined cases.
+The code prioritizes scientific correctness, reproducibility, and transparent visualization rather than aggressive filtering.
+
+Overview
+The pipeline performs the following steps:
+
+01) Loads and filters localization data for two fluorescence channels
+02) Removes ambiguous puncta in crowded regions (same-channel and opposite-channel proximity)
+03) Enforces one-to-one dipole pairing per frame
+04) Computes dipole geometry (distance, azimuth angle Φ, polar angle θ)
+05) Tracks dipoles across frames using midpoint-based assignment
+06) Visualizes dipole distributions and orientations using multiple complementary plots
+All original diagnostic and visualization plots are preserved to support exploratory analysis.
+
+Input Requirements
+The pipeline expects two CSV files with the following columns:
+A. id
+B. frame
+C. x [nm]
+D. y [nm]
+E. uncertainty_xy [nm]
+F. intensity [photon]
+
+Example input files:
+TIRF560_imageregperformed.csv
+TIRF647_imageregperformed.csv
+
+Key Features and Safeguards
+
+Threshold-Based Filtering
+Localizations are filtered by localization uncertainty, photon count, and spatial region of interest. All thresholds are user-adjustable at the top of the script.
+
+Same-Channel Crowding and Ambiguity Removal
+If two puncta in the same channel are closer than the pairing radius and either has an opposite-channel neighbor within that radius, all involved puncta are removed. This conservative rule prevents over-counting in dense regions, false dipole assignments, and track contamination across frames.
+
+One-to-One Dipole Pairing (Per Frame)
+Within each frame, dipole pairing is restricted to a single C1–C2 match per puncta. Pairing is solved using a Hungarian assignment algorithm, and only pairs within the specified distance threshold are retained. This eliminates many-to-many dipole artifacts common in dense SMLM data.
+
+Dipole Geometry Computation
+For each valid dipole pair, the end-to-end distance is computed. The azimuth angle Φ (in degrees) is calculated using atan2. The polar angle θ (in degrees) is computed using a physical rod-length model.
+
+Importantly, θ is not silently filtered or deleted when undefined. For distances exceeding the rod length, θ is set to NaN, preserving the dipole while preventing unphysical values.
+
+Zero-Distance Dipole Handling
+For dipoles where the measured distance is exactly 0 nm, the azimuth direction is physically undefined. In these cases, no orientation arrow is drawn in scatter plots, and a visible “NaN” label is shown instead. The dipole remains in the dataset and all statistics.
+
+Dipole Tracking Across Frames
+Dipoles are tracked across time by computing midpoints between paired puncta and linking midpoints across frames using a distance-based assignment. 
+Each dipole trajectory is assigned a consistent Track ID, enabling time-resolved analysis.
+
+Outputs
+
+The pipeline generates multiple diagnostic and analysis plots, including:
+01) End-to-end distance histograms
+02) Azimuth angle versus distance scatter plots
+03) Theta-colored midpoint maps
+04) Phi-colored midpoint maps
+05) Orientation arrow plots with safeguards for undefined angles
+
+Tracked dipole data are saved to an Excel file named Tracked_Dipoles.xlsx, containing a master sheet and individual sheets for each tracked dipole.
+
