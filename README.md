@@ -12,7 +12,7 @@ TABLE OF CONTENT:
 
 CONTENT
 
-01. Fiduciary markers and image Registration steps
+01. Fiducial markers and image Registration steps
 
 
 Fiducial markers which are diffraction limited with high photostability (TetraSpec Beads TM) were chosen for the procress of image registration. 
